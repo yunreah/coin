@@ -54,14 +54,14 @@ while (1):
 
     #LINEに送信
     for coin, lowprice in lowalert.items():
-        if coinyen[coin] < lowprice:
+        if coinyen[coin] < lowprice and flaglist[coin] == 0:
             message = coin + " is down to " + str(coinyen[coin]) + "円"
             print message + "        "  + str(datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
             payload = {"message": message}
             #files = {"imageFile": open("test.jpg", "rb")}
             r = requests.post(lineurl, headers=headers, params=payload)
             flaglist[coin] = 1
-            thread1 = threading.Thread(target=sleeptime(coin), name=coin)
+            thread1 = threading.Thread(target=sleeptime, name=coin, args=(coin,))
             thread1.start()
 
     for coin, highprice in hihalert.items():
@@ -72,6 +72,6 @@ while (1):
             #files = {"imageFile": open("test.jpg", "rb")}
             r = requests.post(lineurl, headers=headers, params=payload)
             flaglist[coin] = 1
-            thread1 = threading.Thread(target=sleeptime(coin), name=coin)
+            thread1 = threading.Thread(target=sleeptime, name=coin, args=(coin,))
             thread1.start()
     time.sleep(cycle*60)
