@@ -8,22 +8,7 @@ import threading
 import os
 import re
 import smtplib
-from email.mime.text import MIMEText
-from email.Utils import formatdate
 
-def sleeptime(coin):
-    #print coin + "wait"
-    time.sleep(3600)
-    flaglist[coin] = 0
-
-coinList = ["Bitcoin", "Ethereum","NEM","Litecoin","IOTA","Dash","Lisk","OmiseGo","Civic","Status","TenX","InsureX","Bitland",
-            "Ripple","MonaCoin"]
-lowalert = {"Bitcoin":360000,"Ethereum":30000,"Litecoin":4200,"NEM":25,"IOTA":60,"Dash":20000,"Lisk":220,
-            "OmiseGo":600,"Civic":50,"Status":6,"TenX":400}
-hihalert = {"Ethereum":35000,"InsureX":60, "Bitland":70,"NEM":40,"MonaCoin":60}
-
-flaglist = {"Bitcoin":0, "Ethereum":0,"NEM":0,"Litecoin":0,"IOTA":0,"Dash":0,"Lisk":0,"OmiseGo":0,"Civic":0,"Status":0,
-            "TenX":0,"InsureX":0,"Bitland":0, "Ripple":0,"MonaCoin":0}
 
 coinyen = {}
 url = "https://coinmarketcap.com/all/views/all/#JPY"
@@ -31,12 +16,61 @@ lineurl = "https://notify-api.line.me/api/notify"
 token = ""
 headers = {"Authorization" : "Bearer "+ token}
 
-while (1):
-    #web
-    target_html = requests.get(url).text
-    html = lxml.html.fromstring(target_html)
-    exchangerate = float(re.findall('data-jpy="([0-9]+.[0-9]+)', target_html)[0])
 
+#web
+coinlist = []
+target_html = requests.get(url).text
+html = lxml.html.fromstring(target_html)
+for coin in re.findall('<tr id="id-([A-Z,a-z,0-9]+)"',target_html):
+    volume = html.xpath('//*[@id="id-' + coin.lower() + '"]/td[7]/a')[0].text[1:].replace(",","")
+    symbol = html.xpath('//*[@id="id-' + coin.lower() + '"]/td[3]')[0].text
+    try:
+        volume = int(volume)
+    except:
+        continue
+    coinlist.append([coin, volume, symbol])
+#    coinlist = [[] for j in range(len(allcoin))]
+#exchangerate = float(re.findall('data-jpy="([0-9]+.[0-9]+)', target_html)[0])
+coinlist = sorted(coinlist, key=lambda x: x[1],reverse=True)
+
+for coin in coinlist:
+    if coin[1] <= 200000:
+        break
+    url2 =  "https://coinmarketcap.com/currencies/" + coin[0] + "/#markets"
+    target_html = requests.get(url2).text
+    html = lxml.html.fromstring(target_html)
+    pricelist = []
+
+    #market num
+    for i  in range(1,100):
+        try:
+            pair = html.xpath('//*[@id="markets-table"]/tbody/tr[' + str(i) + ']/td[3]/a')[0].text
+        except:
+            break
+        symbol = coin[2] + "/ETH"
+        if symbol != pair:
+            continue
+
+        #/ETH
+        volume24 = float(html.xpath('//*[@id="markets-table"]/tbody/tr[' + str(i) + ']/td[4]/span')[0].text[1:].replace(',',""))
+        if volume24 < 10000:
+            continue
+        volume = float(html.xpath('//*[@id="markets-table"]/tbody/tr[' + str(i) + ']/td[6]')[0].text[:-1])
+        source = html.xpath('//*[@id="markets-table"]/tbody/tr[' + str(i) + ']/td[2]/a')[0].text
+        price = float(html.xpath('//*[@id="markets-table"]/tbody/tr[' + str(i) + ']/td[5]/span')[0].text[1:])
+        pricelist.append([coin[0], source, price, volume])
+
+    if len(pricelist)  < 2:
+        continue
+    pricelist = sorted(pricelist, key=lambda x: x[2], reverse=True)
+    div = pricelist[0][2] / pricelist[-1][2]
+    if div >= 1.1:
+        message = coin[0] + " " + str(round(div,1)) + " " + pricelist[0][1] +  " " + pricelist[-1][1]
+        print message
+        payload = {"message": message}
+        r = requests.post(lineurl, headers=headers, params=payload)
+
+"""""
     for coin in coinList:
         xpath = '//*[@id="id-' + coin.lower()  + '"]'
         priceUSD = float(html.xpath(xpath + "/td[5]/a")[0].text[1:])
@@ -65,3 +99,4 @@ while (1):
             thread1 = threading.Thread(target=sleeptime(coin), name=coin)
             thread1.start()
     time.sleep(300)
+"""
