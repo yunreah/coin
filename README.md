@@ -1,3 +1,4 @@
+coinAlertToLine.py：LINEに仮想通貨の価格アラートを送信するプログラム
 # 使い方
 1. Anaconda等を使ってpythonをインストール
 2. 自分のLINEのアクセストークンを取得
